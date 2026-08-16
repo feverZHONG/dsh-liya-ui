@@ -33,15 +33,17 @@ tapIndex 注入 CSS 统一加大圆角，让界面更圆润。v0.3.0 起 radius 
 ## 安装 / 打包
 
 ```powershell
-# 安装（workspace 目录下执行）
-node "E:\DeepSeek Harness\resources\host\node_modules\@deepseek-ai\dsh\lib\bin.js" plugin --profile web add E:\DCIM\DSH-Liya\workspace\dsh-plugins\dsh-liya-ui
+# 安装（装完重启 WebUI 生效）
+dsh plugin --profile web add <插件目录>
 
-# 打包归档（产物在 workspace\dsh-plugins\dist\）
-pnpm pack --pack-destination E:\DCIM\DSH-Liya\workspace\dsh-plugins\dist
+# 打包归档（产物输出到你的 dist 目录）
+pnpm pack --pack-destination <你的插件分发目录>
 
 # 卸载
-node "...bin.js" plugin --profile web remove dsh-liya-ui-plugin
+dsh plugin --profile web remove dsh-liya-ui-plugin
 ```
+
+> `dsh` 请替换为阁下 DSH 安装对应的 CLI 调用方式。
 
 装完**重启 WebUI** 生效（改过 manifest/client 后必须重启）。
 
