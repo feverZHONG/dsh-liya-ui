@@ -43,7 +43,7 @@ pnpm pack --pack-destination <你的插件分发目录>
 dsh plugin --profile web remove dsh-liya-ui-plugin
 ```
 
-> `dsh` 请替换为阁下 DSH 安装对应的 CLI 调用方式。
+> `dsh` 请替换为你自己 DSH 安装对应的 CLI 调用方式。
 
 装完**重启 WebUI** 生效（改过 manifest/client 后必须重启）。
 
