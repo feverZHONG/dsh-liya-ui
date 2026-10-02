@@ -1,20 +1,33 @@
 // 莉娅 DSH UI 润色插件 —— Host 半（ESM，函数形式，纯 CSS 注入）
 // 功能：webServer.tapIndex 向 index.html 注入圆角润色 CSS——
 //   输入框/搜索框 +2px、对话框 +6px、菜单/下拉/提示 = 基础值，统一走 --liya-radius 变量。
-// 圆角基础值：cordis.patch.yml 的 config.radius（默认 16）为启动兜底；用户配置（settings
-//   namespace `liya-ui` 的 radius）由 client 半覆盖注入，保存后即时生效。
-// 注意：不声明 Config schema（cordis 的 config 走 apply(ctx, config) 第二参数注入——不要读
-//   ctx.config，未声明 Config schema 时是 Proxy 拦截抛错 "cannot get property config without inject"）。
-// schemastery：junction 链接自资源目录 node_modules（workspace/dsh-plugins/node_modules/@deepseek-ai/schemastery），
-// 解决 bundle 插件 link 目录向上解析不到依赖的问题（2026-08-16）。
+// 圆角基础值来源（优先级）：用户配置（profile entry id `dsh-liya-ui` 的 radius，原生设置卡可改、即时生效）
+//   > Config 默认值 16。DSH 0.2.0-rc.2 起 settings 服务没有 register()：配置卡 = 插件导出的
+//   Config（字段必须 .volatile()）+ profile entry id 当 namespace，由原生设置页自动生成。
+// 依赖：@deepseek-ai/schemastery（已写进 package.json dependencies；宿主若按 preserve-symlinks
+//   解析，profile 的 node_modules 里也需要装一份，否则插件 import 直接失败）。
 import Schema from '@deepseek-ai/schemastery'
 
 export const name = 'dsh-liya-ui'
-export const inject = ['webServer', 'settings']
+export const inject = ['webServer']
 
-const liyaUiSchema = Schema.object({
-  radius: Schema.number().min(4).max(48).default(16).description('基础圆角值（px），输入框/对话框/菜单按它派生'),
+export const Config = Schema.object({
+  radius: Schema.number().min(4).max(48).default(16).description('基础圆角值（px），输入框/对话框/菜单按它派生').volatile(),
 })
+
+// volatile 配置值是 cosmokit 引用（.get() 取快照）；Symbol 判定跨 ESM/CJS 副本安全
+const VOLATILE_WRITE = Symbol.for('cosmokit.volatile.write')
+function cfgValue(value, fallback) {
+  if (value !== null && typeof value === 'object' && VOLATILE_WRITE in value) {
+    try {
+      const snap = value.get()
+      return snap === undefined ? fallback : snap
+    } catch {
+      return fallback
+    }
+  }
+  return value === undefined ? fallback : value
+}
 
 function radiusCss(radius) {
   const base = Number(radius) || 16
@@ -34,17 +47,12 @@ function injectAfterBody(html, radius) {
 }
 
 export function apply(ctx, config) {
-  const radius = config?.radius
-  console.log(`[dsh-liya-ui] plugin loaded (host half), default radius=${radius}`)
-  // 圆角配置 namespace。register 内部自带 fiber effect 清理，直接调用 + try/catch 打日志。
-  try {
-    ctx.settings.register('liya-ui', liyaUiSchema, { applies: 'live' })
-    console.log('[dsh-liya-ui] settings namespace registered: liya-ui')
-  } catch (e) {
-    console.error('[dsh-liya-ui] settings.register failed:', e)
-  }
+  // 每次请求实时取 volatile 快照：用户改配置后刷新页面即用新值（tapIndex 是启动注入，不重建）
+  const currentRadius = () => cfgValue(config && config.radius, 16)
+  console.log(`[dsh-liya-ui] plugin loaded (host half), radius=${currentRadius()}`)
+
   ctx.effect(
-    () => ctx.webServer.tapIndex((html) => injectAfterBody(html, radius)),
+    () => ctx.webServer.tapIndex((html) => injectAfterBody(html, currentRadius())),
     'dsh-liya-ui: radius polish',
   )
 }

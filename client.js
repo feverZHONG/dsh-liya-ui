@@ -4,7 +4,7 @@
 //      :root{--liya-radius:Xpx} 覆盖 host tapIndex 的默认值；订阅变更即时生效；
 //      用户未配置时不移除（沿用 host 的 config.radius 默认）。
 //   2. 设置 → 插件 → 插件配置 注册原生风格配置卡（id: dsh-liya-ui）：
-//      可展开 + radius 输入（4-48）+ 保存/撤销，走 settingsScope（host 持久化）。
+//      可展开 + radius 输入（4-48）+ 保存/撤销，走 configForms（host 持久化）。
 // 样式全部走内联 + dsw alias 变量，不依赖 CSS module；跟随官方卡片的视觉语言。
 window.__ModuleLoader__.load({
   id: 'dsh-liya-ui-plugin',
@@ -29,11 +29,20 @@ window.__ModuleLoader__.load({
       return n;
     }
 
-    // ── radius 即时覆盖层（订阅 settingsScope，用户配置存在才注入覆盖）
-    // 教训（2026-08-17 实锤）：settingsScope.bind() 每次调用都新建 controller（初始
-    // status='loading'，load() 异步）——绝不能每次读取都 bind，否则永远读不到 'ready'，
-    // 用户配置永不生效。正确姿势（官方 ui-theme 同款）：apply 期 bind 一次、复用同一
-    // controller，订阅它等 'ready'。
+    // rc.2 设置接入：客户端服务由 settingsScope 改为 configForms（官方 ui-settings 的 client 半提供），
+    // namespace 用 profile entry id（本插件 = dsh-liya-ui）。不写进 inject：服务缺席也不让 boot 卡 pending。
+    function liyaConfigForm(ctx, entryId) {
+      try {
+        var cf = ctx.get('configForms');
+        if (cf === undefined || cf === null || typeof cf.get !== 'function') return null;
+        return cf.get(entryId);
+      } catch (e) { return null; }
+    }
+
+    // ── radius 即时覆盖层（订阅 configForms，用户配置存在才注入覆盖）
+    // 教训（2026-08-17 实锤）：每次 bind 都新建 controller（初始 status='loading'，load() 异步）
+    // ——绝不能每次读取都 bind，否则永远读不到 'ready'，用户配置永不生效。正确姿势（官方
+    // ui-theme 同款）：apply 期取一次 controller 复用，订阅它等 'ready'。
     function mountRadiusOverride(ctx, bound) {
       var styleTag = document.createElement('style');
       styleTag.dataset.plugin = 'dsh-liya-ui-plugin';
@@ -76,10 +85,7 @@ window.__ModuleLoader__.load({
       var ctx = props.ctx;
       var bound = props.bound !== undefined ? props.bound : null;
       if (bound === null) {
-        try {
-          var ss0 = ctx.get('settingsScope');
-          if (ss0 !== undefined) bound = ss0.bind({ namespace: 'liya-ui' });
-        } catch (e) { bound = null; }
+        bound = liyaConfigForm(ctx, 'dsh-liya-ui');
       }
 
       var openState = react.useState(false);
@@ -113,7 +119,7 @@ window.__ModuleLoader__.load({
       var value = (snap && snap.value && typeof snap.value === 'object') ? snap.value : {};
       var user = (snap && snap.user && typeof snap.user === 'object') ? snap.user : {};
       var diag = {
-        hasSettingsScope: ctx.get('settingsScope') !== undefined,
+        hasConfigForms: ctx.get('configForms') !== undefined,
         bound: bound !== null,
         status: snap === null ? 'no-snap' : snap.status,
         syncError: syncError,
@@ -265,35 +271,19 @@ window.__ModuleLoader__.load({
       );
     }
 
-    exports.inject = ['slots', 'settingsScope'];
+    exports.inject = ['slots'];
     exports.apply = function (ctx) {
-      // 配置 scope 在 apply 期绑定一次（卡与覆盖共用，不在 React 渲染期 bind）。
-      // bind() 每次调用都是新 controller（初始 'loading'、load 异步），重复 bind 永远读
-      // 'loading'——2026-08-17 实锤的坑，官方 ui-theme 也是 apply 期 bind 一次复用。
-      var uiScopeBound = null;
-      try {
-        var uiSs = ctx.get('settingsScope');
-        if (uiSs !== undefined) uiScopeBound = uiSs.bind({ namespace: 'liya-ui' });
-      } catch (e) { uiScopeBound = null; }
+      // 配置 controller 在 apply 期取一次复用（卡与覆盖共用，不在 React 渲染期取）。
+      var uiScopeBound = liyaConfigForm(ctx, 'dsh-liya-ui');
 
       // radius 即时覆盖（host 默认兜底；用户配置保存后立刻生效）
       ctx.effect(function () {
         return mountRadiusOverride(ctx, uiScopeBound);
       }, 'dsh-liya-ui: radius override');
 
-      var slots = ctx.get('slots');
-      if (slots === undefined) return;
-      slots.inject('settings.plugin.item', function () {
-        return slots.register(
-          {
-            name: 'settings.plugin.item',
-            id: 'dsh-liya-ui',
-            order: 30,
-            label: function () { return 'dsh-liya-ui'; }
-          },
-          function (props) { return LiyaUiCard(Object.assign({}, props, { ctx: ctx, bound: uiScopeBound })); }
-        );
-      });
+      // rc.2：`settings.plugin.item` 插槽已被官方移除，注册它会抛错连累 client 条目激活。
+      // 配置卡改由官方「设置 → 插件」页从插件导出的 Config（volatile 字段）+ entry id
+      // 自动生成。LiyaUiCard 组件保留在文件里（未注册）备用。
     };
 
     module.exports = exports;

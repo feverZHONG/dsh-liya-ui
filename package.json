@@ -1,28 +1,45 @@
 {
   "name": "dsh-liya-ui-plugin",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "莉娅 DSH UI 润色插件：tapIndex 注入 CSS 统一加大圆角；radius 走 settings 配置（设置→插件→配置卡可编辑，保存即时生效），host config 为启动兜底。v0.3.1 修复 settingsScope 重复 bind 导致配置永不生效 + 覆盖样式被 host 默认压掉的层叠坑。",
   "type": "module",
   "main": "index.js",
   "exports": {
-    ".": { "default": "./index.js" },
-    "./client": { "default": "./client.js" },
+    ".": {
+      "default": "./index.js"
+    },
+    "./client": {
+      "default": "./client.js"
+    },
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
-  "files": ["index.js", "client.js", "cordis.patch.yml", "README.md"],
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
   "license": "MIT",
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
-      "inject": ["@deepseek-ai/dsh-client-ui-slots", "@deepseek-ai/dsh-client-runtime"],
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-runtime"
+      ],
       "platform": "web"
     }
   },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.4"
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-host-webserver": "0.1.0-rc.5",
-    "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.5",
-    "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.5"
+    "@deepseek-ai/dsh-host-webserver": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-runtime": "0.2.0-rc.2"
   }
 }
