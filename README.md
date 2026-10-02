@@ -1,15 +1,15 @@
 # dsh-liya-ui-plugin · 莉娅 DSH UI 润色插件
 
-tapIndex 注入 CSS 统一加大圆角，让界面更圆润。v0.3.0 起 radius 可配置：
-设置 → 插件 → **插件配置** 里 `dsh-liya-ui-plugin` 卡可编辑基础圆角（4-48），保存**即时生效**（host 持久化）。
+tapIndex 注入 CSS 统一加大圆角，让界面更圆润。radius 可配置：
+设置 → 插件 里本插件的配置项可编辑基础圆角（4-48），保存**即时生效**（host 持久化）。
 
-> **v0.3.1（2026-08-17）修了两处「配置不生效」的实锤坑：**
-> 1. **settingsScope 重复 bind**：`settingsScope.bind()` 每次调用都新建 controller（初始 `status='loading'`、
->    load 异步），旧代码每次读取都 bind → 永远读不到 `ready` → 用户配置永不生效。
->    修法：apply 期 bind 一次、复用同一 controller（官方 ui-theme 同款姿势）。
-> 2. **层叠顺序**：host 默认样式（`:root{--liya-radius:16px}`）注入在 `<body>` 开头，晚于 head 里的
->    覆盖样式，同特异性按文档顺序后者赢 → 覆盖被默认值压掉。修法：覆盖声明加 `!important`。
-> 改完刷新 WebUI 页面即生效（client bundle no-cache 实时读文件）。
+> **v0.4.0（2026-10-02）适配 DSH 0.2.0-rc.2**：rc.2 移除了客户端 `settingsScope` 服务与 host 的
+> `ctx.settings.register()`。配置改为「插件导出 `Config`（字段需 `.volatile()`）+ profile entry id 作
+> namespace」+ 客户端 `ctx.get('configForms')`，配置项由原生「设置 → 插件」页自动生成（旧的自定义
+> `settings.plugin.item` 卡退役）。本版本起仅适配 rc.2 及以后。
+>
+> 另修（2026-08-17 实锤）：覆盖声明需 `!important`——host 默认样式（`:root{--liya-radius:16px}`）注入在
+> `<body>` 开头，晚于 head 里的覆盖样式，同特异性按文档顺序后者赢。改完刷新页面即生效。
 
 ## 改了什么
 
@@ -19,15 +19,16 @@ tapIndex 注入 CSS 统一加大圆角，让界面更圆润。v0.3.0 起 radius 
 | 对话框 `[role="dialog"]` | 基础值 + 6px |
 | 菜单 / 下拉 / 提示 `[role="menu"/"listbox"/"tooltip"/"combobox"]` | 基础值 |
 
-基础值 = settings 配置 `radius`（默认 16），走 `--liya-radius` 变量。
+基础值 = 插件配置 `radius`（默认 16），走 `--liya-radius` 变量。
 
 ## 原理
 
 - host 半 `webServer.tapIndex()` 往 index.html 的 `<body>` 后注入 `<style>`（官方 ui-theme bootTheme 同款 seam），
   radius 用 `config.radius`（cordis.patch.yml，默认 16）作为启动兜底
-- host 半 `ctx.settings.register('liya-ui', Schema.object({radius}))` 注册配置 namespace
-- client 半订阅 `settingsScope`：用户配置存在时注入 `:root{--liya-radius:Xpx}` 覆盖 host 默认（保存即时生效）；
-  未配置/重置时移除覆盖，沿用 host 默认
+- host 半导出 `Config = Schema.object({ radius })`（字段 `.volatile()`），namespace = profile entry id `dsh-liya-ui`；
+  配置项由原生「设置 → 插件」页自动生成
+- client 半 `ctx.get('configForms').get('dsh-liya-ui')`：用户配置存在时注入 `:root{--liya-radius:Xpx}` 覆盖 host 默认
+  （保存即时生效）；未配置/重置时移除覆盖，沿用 host 默认
 - 选择器全部走语义 `role` / 标签，不碰 DSH 的 hash 类名（升级不失效）；`!important` 才能压过组件内联样式
 
 ## 安装 / 打包
