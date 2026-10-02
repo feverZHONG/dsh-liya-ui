@@ -50,7 +50,8 @@ dsh plugin --profile web remove dsh-liya-ui-plugin
 
 ## 调圆角大小
 
-**推荐**：设置 → 插件 → 插件配置 → dsh-liya-ui-plugin → 改 radius（4-48）→ 保存，即时生效。
+**推荐**：设置 → 插件 → 找到 dsh-liya-ui-plugin → 改 radius（4-48）→ 保存，即时生效（DSH 0.2.0-rc.2
+起配置项由原生插件页自动生成）。
 兜底默认值在 `cordis.patch.yml` 的 `config.radius`。想细化某个表面，改 `index.js` 的 `radiusCss()` 里对应行的系数。
 
 ## 已知边界
